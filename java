@@ -1,199 +1,342 @@
-import java.util.Random;
+import java.awt.Dimension;
+import java.awt.Color;
+import java.awt.event.*;
+import java.awt.Graphics;
+import java.awt.Image;
+import java.awt.Font;
+import java.awt.Toolkit;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+import javax.swing.ImageIcon;
+import java.io.*;
 import java.util.Scanner;
+// new sh8 na di ko pa alam 
 
-public class TicTacToe {
-    public static String[][] gameTable = {
-        {"A", "0", "0"},
-        {"B", "0", "0"},
-        {"C", "0", "0"}
-    }; // The gameTable array represents the game board with initial values.
 
-    public static boolean firstCondition = false;
-    public static boolean secondCondition = false; // These boolean variables are used to determine if a winner is decided.
+public class TictactoeOfficial extends JPanel implements ActionListener {
 
-    public static void main(String[] args) {
-        TicTacToe ticTacToe = new TicTacToe();
-        ticTacToe.startGame();
-    }
+	// logic variables
+	boolean playerX;
+	boolean gameDone = false;
+	int winner = -1;
+	int player1wins = 0, player2wins = 0;
+	int[][] board = new int[3][3];
 
-    private void startGame() {
-        Random random = new Random();
-        char currentPlayer = (random.nextInt(2) == 0) ? 'O' : 'X'; // Randomize who moves first
-        char opponentPlayer = (currentPlayer == 'O') ? 'X' : 'O';
+	// paint variables
+	int lineWidth = 5;
+	int lineLength = 270;
+	int x = 15, y = 100; 
+	int offset = 95;
+	int a = 0;
+	int b = 5;
+	int selX = 0;
+	int selY = 0;
 
-        Scanner scanner = new Scanner(System.in);
-        boolean playAgain = true;
+	// COLORS
+	Color turtle = new Color(0x80bdab);
+	Color orange = new Color(0xfdcb9e);
+	Color offwhite = new Color(0xf7f7f7);
+	Color darkgray = new Color(0x3f3f44);
 
-        while (playAgain) {
-            initializeBoard();
-            printBoard();
+	// COMPONENTS
+	JButton jButton;
 
-            boolean isComputerOpponent = chooseGameMode(scanner);
-            boolean gameOver = false;
+	// CONSTRUCTOR
+	public TictactoeOfficial() {
+		Dimension size = new Dimension(420, 300);
+		setPreferredSize(size);
+		setMaximumSize(size);
+		setMinimumSize(size);
+		addMouseListener(new XOListener());
+		jButton = new JButton("Play Again?");
+		jButton.addActionListener(this);
+		jButton.setBounds(315, 210, 100, 30);
+		add(jButton);
+		resetGame();
+	}
 
-            while (!gameOver) {
-                if (currentPlayer == 'O') {
-                    if (isComputerOpponent) {
-                        makeRandomMove(currentPlayer);
-                    } else {
-                        makePlayerMove(currentPlayer, scanner);
-                    }
-                } else {
-                    makePlayerMove(currentPlayer, scanner);
-                }
+	public void resetGame() {
+		playerX = true;
+		winner = -1;
+		gameDone = false;
+		for (int i = 0; i < 3; i++) {
+			for (int j = 0; j < 3; j++) {
+				board[i][j] = 0; // para wala pay sulod tanan
+			}
+		}
+		getJButton().setVisible(false);
+	}
 
-                printBoard();
+	public void paintComponent(Graphics page) {
+		super.paintComponent(page);
+		drawBoard(page);
+		drawUI(page);
+		drawGame(page);
+	}
 
-                if (checkWinCondition(currentPlayer)) {
-                    System.out.println(currentPlayer + " wins the game!");
-                    updateScore(currentPlayer);
-                    gameOver = true;
-                } else if (isBoardFull()) {
-                    System.out.println("The game is a draw!");
-                    gameOver = true;
-                } else {
-                    currentPlayer = (currentPlayer == 'O') ? 'X' : 'O';
-                }
-            }
+	public void drawBoard(Graphics page) {
+		setBackground(turtle);
+		page.setColor(darkgray);
+		page.fillRoundRect(x, y, lineLength, lineWidth, 5, 30);
+		page.fillRoundRect(x, y + offset, lineLength, lineWidth, 5, 30);
+		page.fillRoundRect(y, x, lineWidth, lineLength, 30, 5);
+		page.fillRoundRect(y + offset, x, lineWidth, lineLength, 30, 5);
+	}
 
-            printScore();
+	public void drawUI(Graphics page) {
+		// setting color(dili LGBT)
+		page.setColor(darkgray);
+		page.fillRect(300, 0, 120, 300);
+		Font font = new Font("Helvetica", Font.PLAIN, 20);
+		page.setFont(font);
 
-            System.out.print("Play again? (Y/N): ");
-            String playAgainInput = scanner.nextLine();
-            playAgain = playAgainInput.equalsIgnoreCase("Y");
-        }
+		// WIN COUNTER
+		page.setColor(offwhite);
+		page.drawString("Win Count", 310, 30);
+		page.drawString(": " + player1wins, 362, 70);
+		page.drawString(": " + player2wins, 362, 105);
 
-        scanner.close();
-    }
+		// DRAW score X (error pa file sa image export cuz me dont know how)
+		ImageIcon xIcon = new ImageIcon("dababyX.png");
+		Image xImg = xIcon.getImage();
+		Image newXImg = xImg.getScaledInstance(27, 27, java.awt.Image.SCALE_SMOOTH);
+		ImageIcon newXIcon = new ImageIcon(newXImg);
+		page.drawImage(newXIcon.getImage(), 44 + offset * 1 + 190, 47 + offset * 0, null);
 
-    private void initializeBoard() {
-        gameTable = new String[][] {
-            {"A", "0", "0"},
-            {"B", "0", "0"},
-            {"C", "0", "0"}
-        };
-    }
+		// DRAW score O 
+		page.setColor(offwhite);
+		page.fillOval(43 + 190 + offset, 80, 30, 30);
+		page.setColor(darkgray);
+		page.fillOval(49 + 190 + offset, 85, 19, 19);
 
-    private void printBoard() {
-        for (int i = 0; i < gameTable.length; i++) {
-            for (int j = 0; j < gameTable[i].length; j++) {
-                System.out.print(gameTable[i][j] + " ");
-            }
-            System.out.println();
-        }
-    }
+		// DRAW WHOS TURN or WINNER
+		page.setColor(offwhite);
+		Font font1 = new Font("Serif", Font.ITALIC, 18);
+		page.setFont(font1);
 
-    private boolean chooseGameMode(Scanner scanner) {
-        System.out.print("Select game mode: (1) Computer vs. Computer, (2) Human vs. Computer: ");
-        int mode = scanner.nextInt();
-        scanner.nextLine();
-        return mode == 2;
-    }
+		if (gameDone) {
+			if (winner == 1) { // x
+				page.drawString("The winner is", 310, 150);
+				page.drawImage(xImg, 335, 160, null);
+			} else if (winner == 2) { // o
+				page.drawString("The winner is", 310, 150);
+				page.setColor(offwhite);
+				page.fillOval(332, 160, 50, 50);
+				page.setColor(darkgray);
+				page.fillOval(342, 170, 30, 30);
+			} else if (winner == 3) { // tie
+				page.drawString("It's a tie", 330, 178);
+			}
+		} else {
+			Font font2 = new Font("Serif", Font.ITALIC, 20);
+			page.setFont(font2);
+			page.drawString("It's", 350, 160);
+			if (playerX) {
+				page.drawString("X 's Turn", 325, 180);
+			} else {
+				page.drawString("O 's Turn", 325, 180);
+			}
+		}
+	}
 
-    private void makeRandomMove(char currentPlayer) {
-        Random random = new Random();
-        int row = random.nextInt(3);
-        int col = random.nextInt(3);
+	public void drawGame(Graphics page) {
+		for (int i = 0; i < 3; i++) {
+			for (int j = 0; j < 3; j++) {
+				if (board[i][j] == 0) {
 
-        while (!isValidMove(row, col)) {
-            row = random.nextInt(3);
-            col = random.nextInt(3);
-        }
+				} else if (board[i][j] == 1) {
+					ImageIcon xIcon = new ImageIcon("DababyX.png");
+					Image xImg = xIcon.getImage();
+					page.drawImage(xImg, 30 + offset * i, 30 + offset * j, this);
+				} else if (board[i][j] == 2) {
+					page.setColor(offwhite);
+					page.fillOval(30 + offset * i, 30 + offset * j, 50, 50);
+					page.setColor(turtle);
+					page.fillOval(40 + offset * i, 40 + offset * j, 30, 30);
+				}
+			}
+		}
+		repaint();
+	}
+    //checker
+	public void checkWinner() {
+		if (gameDone == true) {
+			System.out.print("gameDone");
+			return;
+		}
+		// vertical
+		int temp = -1;
+		if ((board[0][0] == board[0][1])
+				&& (board[0][1] == board[0][2])
+				&& (board[0][0] != 0)) {
+			temp = board[0][0];
+		} else if ((board[1][0] == board[1][1])
+				&& (board[1][1] == board[1][2])
+				&& (board[1][0] != 0)) {
+			temp = board[1][1];
+		} else if ((board[2][0] == board[2][1])
+				&& (board[2][1] == board[2][2])
+				&& (board[2][0] != 0)) {
+			temp = board[2][1];
 
-        gameTable[row][col] = String.valueOf(currentPlayer);
-    }
+			// horizontal
+		} else if ((board[0][0] == board[1][0])
+				&& (board[1][0] == board[2][0])
+				&& (board[0][0] != 0)) {
+			temp = board[0][0];
+		} else if ((board[0][1] == board[1][1])
+				&& (board[1][1] == board[2][1])
+				&& (board[0][1] != 0)) {
+			temp = board[0][1];
+		} else if ((board[0][2] == board[1][2])
+				&& (board[1][2] == board[2][2])
+				&& (board[0][2] != 0)) {
+			temp = board[0][2];
 
-    private void makePlayerMove(char currentPlayer, Scanner scanner) {
-        System.out.print("Enter move (e.g., A1, B3): ");
-        String move = scanner.nextLine();
-        int row = convertRow(move.charAt(0));
-        int col = convertCol(move.charAt(1));
+			// diagonal
+		} else if ((board[0][0] == board[1][1])
+				&& (board[1][1] == board[2][2])
+				&& (board[0][0] != 0)) {
+			temp = board[0][0];
+		} else if ((board[0][2] == board[1][1])
+				&& (board[1][1] == board[2][0])
+				&& (board[0][2] != 0)) {
+			temp = board[0][2];
+		} else {
 
-        while (!isValidMove(row, col)) {
-            System.out.println("Invalid move! Try again.");
-            System.out.print("Enter move (e.g., A1, B3): ");
-            move = scanner.nextLine();
-            row = convertRow(move.charAt(0));
-            col = convertCol(move.charAt(1));
-        }
+			// CHECK FOR A TIE
+			boolean notDone = false;
+			for (int i = 0; i < 3; i++) {
+				for (int j = 0; j < 3; j++) {
+					if (board[i][j] == 0) {
+						notDone = true;
+						break;
+					}
+				}
+			}
+			if (notDone == false) {
+				temp = 3;
+			}
+		}
+		if (temp > 0) {
+			winner = temp;
+			if (winner == 1) {
+				player1wins++;
+				System.out.println("winner is X");
+			} else if (winner == 2) {
+				player2wins++;
+				System.out.println("winner is O");
+			} else if (winner == 3) {
+				System.out.println("It's a tie");
+			}
+			gameDone = true;
+			getJButton().setVisible(true);
+		}
+	}
 
-        gameTable[row][col] = String.valueOf(currentPlayer);
-    }
+	public JButton getJButton() {	return jButton; }
 
-    private boolean isValidMove(int row, int col) {
-        return row >= 0 && row < 3 && col >= 0 && col < 3 && gameTable[row][col].equals("0");
-    }
+	public void setPlayerXWins(int a) {
+		player1wins = a;
+	}
 
-    private int convertRow(char rowChar) {
-        return Character.toUpperCase(rowChar) - 'A';
-    }
+	public void setPlayerOWins(int a) {
+		player2wins = a;
+	}
 
-    private int convertCol(char colChar) {
-        return Character.getNumericValue(colChar) - 1;
-    }
+	public static void main(String[] args) {
+		JFrame frame = new JFrame("Tic Tac Toe");
+		frame.getContentPane();
 
-    private boolean checkWinCondition(char currentPlayer) {
-        return checkRows(currentPlayer) || checkColumns(currentPlayer) || checkDiagonals(currentPlayer);
-    }
+		TictactoeOfficial gamePanel = new TictactoeOfficial();
+		frame.add(gamePanel);
 
-    private boolean checkRows(char currentPlayer) {
-        for (int i = 0; i < 3; i++) {
-            if (gameTable[i][0].equals(String.valueOf(currentPlayer))
-                && gameTable[i][1].equals(String.valueOf(currentPlayer))
-                && gameTable[i][2].equals(String.valueOf(currentPlayer))) {
-                return true;
-            }
-        }
-        return false;
-    }
+		frame.addWindowListener(new WindowAdapter() {
+			public void windowOpened(WindowEvent e) {
+				try {
+					File file = new File("score.txt");
+					Scanner sc = new Scanner(file);
+					gamePanel.setPlayerXWins(Integer.parseInt(sc.nextLine()));
+					gamePanel.setPlayerOWins(Integer.parseInt(sc.nextLine()));
+					sc.close();
+				} catch (IOException io) {
+					// file doesnt exist
+					File file = new File("score.txt");
+				}
+			}
 
-    private boolean checkColumns(char currentPlayer) {
-        for (int i = 0; i < 3; i++) {
-            if (gameTable[0][i].equals(String.valueOf(currentPlayer))
-                && gameTable[1][i].equals(String.valueOf(currentPlayer))
-                && gameTable[2][i].equals(String.valueOf(currentPlayer))) {
-                return true;
-            }
-        }
-        return false;
-    }
+			public void windowClosing(WindowEvent e) {
+				try {
+					PrintWriter pw = new PrintWriter("score.txt");
+					pw.write("");
+					pw.write(gamePanel.player1wins + "\n");
+					pw.write(gamePanel.player2wins + "\n");
+					pw.close();
+				} catch (FileNotFoundException e1) { }
+			}
+		});
+		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		frame.setResizable(false);
+		frame.pack();
+		frame.setVisible(true);
+	}
+    //indiano guy wala na nag english sabton pa
+	private class XOListener implements MouseListener {
 
-    private boolean checkDiagonals(char currentPlayer) {
-        if (gameTable[0][0].equals(String.valueOf(currentPlayer))
-            && gameTable[1][1].equals(String.valueOf(currentPlayer))
-            && gameTable[2][2].equals(String.valueOf(currentPlayer))) {
-            return true;
-        }
+		public void mouseClicked(MouseEvent event) {
+			selX = -1;
+			selY = -1;
+			if (gameDone == false) {
+				a = event.getX();
+				b = event.getY();
+				int selX = 0, selY = 0;
+				if (a > 12 && a < 99) {
+					selX = 0;
+				} else if (a > 103 && a < 195) {
+					selX = 1;
+				} else if (a > 200 && a < 287) {
+					selX = 2;
+				} else {
+					selX = -1;
+				}
 
-        if (gameTable[0][2].equals(String.valueOf(currentPlayer))
-            && gameTable[1][1].equals(String.valueOf(currentPlayer))
-            && gameTable[2][0].equals(String.valueOf(currentPlayer))) {
-            return true;
-        }
+				if (b > 12 && b < 99) {
+					selY = 0;
+				} else if (b > 103 && b < 195) {
+					selY = 1;
+				} else if (b > 200 && b < 287) {
+					selY = 2;
+				} else {
+					selY = -1;
+				}
+				if (selX != -1 && selY != -1) {
 
-        return false;
-    }
+					if (board[selX][selY] == 0) {
+						if (playerX) {
+							board[selX][selY] = 1;
+							playerX = false;
+						} else {
+							board[selX][selY] = 2;
+							playerX = true;
+						}
+						checkWinner();
+						System.out.println(" CLICK= x:" + a + ",y: " + b + "; selX,selY: " + selX + "," + selY);
 
-    private boolean isBoardFull() {
-        for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++) {
-                if (gameTable[i][j].equals("0")) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
+					}
+				} else {
+					System.out.println("invalid click");
+				}
+			}
+		}
+    
+		public void mouseReleased(MouseEvent event) {}
+		public void mouseEntered(MouseEvent event) {}
+		public void mouseExited(MouseEvent event) {}
+		public void mousePressed(MouseEvent event) {}
+	}
 
-    private void updateScore(char currentPlayer) {
-        if (currentPlayer == 'O') {
-            // Update score for player O
-        } else {
-            // Update score for player X
-        }
-    }
+	@Override
+	public void actionPerformed(ActionEvent e) { resetGame(); }
 
-    private void printScore() {
-        // Print the current scores
-    }
 }
